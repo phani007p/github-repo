@@ -1,0 +1,57 @@
+trigger:
+- master
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+- stage: Build
+  jobs:
+    - job: Build
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+        # BFF builds
+        - script: |
+            tag="${{ variables.tag }}"
+            ls -al
+            wget https://github.com/wso2/product-apim-tooling/releases/download/v4.3.0/apictl-4.3.0-linux-amd64.tar.gz
+            FILE_NAME=ls apictl-*-linux-amd64.tar.gz
+            echo "$ tar -xf $FILE_NAME"
+            tar -xf $FILE_NAME
+            echo "$ cd Apictl"
+            cd apictl/
+            echo "$ chmod +x apictl"
+            chmod +x apictl
+            mkdir APIs
+            echo "$ mkdir APIs"
+            echo "$ ./apictl set --export-directory ./APIs"
+            ./apictl set --export-directory ./APIs
+            echo "$ ./apictl add env wso2-int --apim https://techhub-sandbox.proximus.com/wso2-int/"
+            ./apictl add env wso2-int --apim https://techhub-sandbox.proximus.com/wso2-int/
+            echo "$ ./apictl add env wso2-ext --apim https://techhub-sandbox.proximus.com/wso2-ext/"
+            ./apictl add env wso2-ext --apim https://techhub-sandbox.proximus.com/wso2-ext/
+            echo "$ ./apictl login wso2-int -u xxxx -p xxxx"
+            ./apictl login wso2-int -u admin -p admin
+            echo "$ ./apictl login wso2-ext -u xxxx -p xxxx"
+            ./apictl login wso2-ext -u admin -p admin
+            echo "$ ./apictl get apis -e wso2-int"
+            ./apictl get apis -e wso2-int
+            echo "$ ./apictl export apis -e wso2-int"
+            ./apictl export apis -e wso2-int 
+            echo "$ ./apictl export apis -e wso2-ext"
+            ./apictl export apis -e wso2-ext
+
+
+        - task: CopyFiles@2
+          displayName: "Copy deployment React yaml"
+          inputs:
+            SourceFolder: '$(Pipeline.Workspace)/s/Apictl/APIs'
+            TargetFolder: '$(build.ArtifactStagingDirectory)/'
+
+        - task: PublishBuildArtifacts@1
+          displayName: "Publish all APIs"
+          inputs:
+            PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+            ArtifactName: 'WSO2APIs'
+            publishLocation: 'Container'
+
