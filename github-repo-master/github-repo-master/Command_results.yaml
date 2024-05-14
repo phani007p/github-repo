@@ -1,0 +1,10 @@
+-
+  name: Check connectivity
+  hosts: all
+  tasks:
+    - name: SFP details
+      shell: date;uptime
+      register: command_output
+
+    - debug:
+        var: command_output.stdout_lines
